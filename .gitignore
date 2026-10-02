@@ -10,4 +10,3 @@ venv/
 # test output and local scratch files
 /tests/_output/
 *.pdf
-!docs/**/*.pdf

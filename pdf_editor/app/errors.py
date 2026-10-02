@@ -15,7 +15,7 @@ import sys
 import traceback
 from types import TracebackType
 
-from PySide6.QtCore import QStandardPaths
+from PySide6.QtCore import QtMsgType, QStandardPaths, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from ..core.errors import OperationCancelled, PdfEditorError
@@ -47,7 +47,23 @@ def setup_logging(level: int = logging.INFO) -> str:
         stream.setLevel(logging.WARNING)
         root.addHandler(stream)
     root.setLevel(level)
+    qInstallMessageHandler(_qt_message_handler)
     return path
+
+
+_QT_NOISE = ("propagateSizeHints", "QFont::setPointSize", "Unknown property")
+
+
+def _qt_message_handler(kind: QtMsgType, _context, message: str) -> None:
+    """Send Qt's own warnings to the log file instead of the console."""
+    if any(noise in message for noise in _QT_NOISE):
+        return
+    if kind in (QtMsgType.QtCriticalMsg, QtMsgType.QtFatalMsg):
+        log.error("Qt: %s", message)
+    elif kind == QtMsgType.QtWarningMsg:
+        log.warning("Qt: %s", message)
+    else:
+        log.debug("Qt: %s", message)
 
 
 def _parent() -> QWidget | None:

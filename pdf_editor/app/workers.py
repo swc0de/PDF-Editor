@@ -15,6 +15,7 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtWidgets import QProgressDialog, QWidget
+from shiboken6 import Shiboken
 
 from ..core.errors import OperationCancelled
 from ..core.jobs import run_job
@@ -24,6 +25,15 @@ log = logging.getLogger(__name__)
 
 # Tests may switch this off to run jobs in the worker thread instead.
 USE_PROCESSES = True
+
+# Jobs that have not finished yet (so closing the window can cancel them).
+_active_jobs: set["Job"] = set()
+
+
+def cancel_all_jobs() -> None:
+    """Ask every running job to stop (used when the main window closes)."""
+    for job in list(_active_jobs):
+        job.cancel_event.set()
 
 
 class _Signals(QObject):
@@ -70,7 +80,10 @@ class Job(QObject):
         on_success: Callable[[Any], None] | None = None,
         on_finally: Callable[[], None] | None = None,
     ) -> None:
-        super().__init__(parent)
+        # Not parented to the window: if the window is destroyed first, the
+        # job must still receive its finished signal to remove temporary files.
+        # ``_active_jobs`` keeps it alive until then.
+        super().__init__()
         self.parent_widget = parent
         self.cancel_event = threading.Event()
         self.on_success = on_success
@@ -92,15 +105,20 @@ class Job(QObject):
 
     def start(self) -> "Job":
         self.dialog.setValue(0)
+        _active_jobs.add(self)
         QThreadPool.globalInstance().start(self.runnable)
         return self
+
+    def _alive(self) -> bool:
+        """False once the window that started the job has been destroyed."""
+        return Shiboken.isValid(self) and Shiboken.isValid(self.parent_widget)
 
     def _cancel(self) -> None:
         self.cancel_event.set()
         self.dialog.setLabelText("Cancelling…")
 
     def _on_progress(self, done: int, total: int, message: str) -> None:
-        if self.cancel_event.is_set():
+        if self.cancel_event.is_set() or not self._alive():
             return
         if total > 0:
             self.dialog.setMaximum(total)
@@ -115,6 +133,7 @@ class Job(QObject):
         self.dialog.deleteLater()
 
     def _cleanup(self) -> None:
+        _active_jobs.discard(self)
         if self.on_finally is not None:
             try:
                 self.on_finally()
@@ -123,6 +142,9 @@ class Job(QObject):
 
     def _on_finished(self, result: Any) -> None:
         self.result = result
+        if not self._alive():  # the window is gone: only remove temporary files
+            self._cleanup()
+            return
         self._close_dialog()
         try:
             if self.on_success is not None:
@@ -135,6 +157,9 @@ class Job(QObject):
 
     def _on_failed(self, exc: BaseException) -> None:
         self.error = exc
+        if not self._alive():
+            self._cleanup()
+            return
         self._close_dialog()
         self._cleanup()
         if not isinstance(exc, OperationCancelled):

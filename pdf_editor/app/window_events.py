@@ -54,6 +54,7 @@ class WindowEventsMixin:
             self.update_ui()
 
     def on_document_saved(self, tab: DocumentTab) -> None:
+        self.autosave.forget(tab)
         self._update_tab_title(tab)
         self.update_ui()
 

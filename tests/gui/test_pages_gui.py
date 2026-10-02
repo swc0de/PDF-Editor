@@ -139,9 +139,11 @@ def test_split_job_runs_in_background(window, qtbot, ten_page_pdf, tmp_path, mon
         return True
 
     monkeypatch.setattr(split.SplitDialog, "exec", fake_exec)
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+    finished = []
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: finished.append(a[2]) or QMessageBox.StandardButton.No)
     window.pages_ctl.split()
-    qtbot.waitUntil(lambda: len(os.listdir(out_dir)) == 4, timeout=30000)
+    qtbot.waitUntil(lambda: bool(finished), timeout=30000)  # wait for the job's completion callback
+    assert len(os.listdir(out_dir)) == 4 and "Created 4 file(s)" in finished[0]
 
 
 def test_merge_job(window, qtbot, tmp_path, monkeypatch):

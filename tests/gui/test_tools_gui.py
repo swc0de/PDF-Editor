@@ -122,13 +122,15 @@ def test_export_images_and_text_jobs(window, qtbot, text_pdf, tmp_path, monkeypa
         return True
 
     monkeypatch.setattr(tools_dialogs.ExportImagesDialog, "exec", configure)
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+    finished = []
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: finished.append(a[2]) or QMessageBox.StandardButton.No)
     window.tools.export_images()
-    qtbot.waitUntil(lambda: len(os.listdir(folder)) == 3, timeout=60000)
+    qtbot.waitUntil(lambda: bool(finished), timeout=60000)
+    assert len(os.listdir(folder)) == 3
     txt = str(tmp_path / "doc.txt")
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (txt, ""))
     window.tools.export_text()
-    qtbot.waitUntil(lambda: os.path.exists(txt) and os.path.getsize(txt) > 0, timeout=60000)
+    qtbot.waitUntil(lambda: "Exported" in window.statusBar().currentMessage(), timeout=60000)
     assert "Unique marker 002" in open(txt, encoding="utf-8").read()
 
 

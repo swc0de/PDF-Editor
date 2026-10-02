@@ -14,6 +14,7 @@ from ..settings import Settings
 from . import menus
 from .actions import SPECS, create_actions
 from .annotations_panel import AnnotationsPanel
+from .autosave import AutosaveManager
 from .controllers.annotate_ops import AnnotController
 from .controllers.content_ops import ContentController
 from .controllers.edit_ops import EditController, HelpController, ToolController
@@ -28,11 +29,13 @@ from .search import SearchBar
 from .theme import canvas_color
 from .thumbnails import ThumbnailModel, ThumbnailPanel
 from .tool_options import ToolOptions, ToolOptionsBar
+from .workers import cancel_all_jobs
 from .widgets import PageNumberBox, StatusLabels, WelcomePage, ZoomBox
 from .window_events import WindowEventsMixin
+from .window_recovery import RecoveryMixin
 
 
-class MainWindow(WindowEventsMixin, QMainWindow):
+class MainWindow(RecoveryMixin, WindowEventsMixin, QMainWindow):
     """Top-level window holding one tab per open document."""
 
     def __init__(self, settings: Settings, effective_theme: str = "light") -> None:
@@ -56,6 +59,7 @@ class MainWindow(WindowEventsMixin, QMainWindow):
         self.content_ctl = ContentController(self)
         self.help = HelpController(self)
         self.tool_options = ToolOptions(settings, self)
+        self.autosave = AutosaveManager(settings.autosave_minutes, parent=self)
         self._init_extensions()
 
         self.page_box = PageNumberBox(self)
@@ -188,6 +192,7 @@ class MainWindow(WindowEventsMixin, QMainWindow):
         tab.zoomChanged.connect(lambda _z, t=tab: self._on_zoom_changed(t))
         tab.toolChanged.connect(lambda name, t=tab: self._on_tool_changed(t, name))
         tab.history.changed.connect(lambda t=tab: self._on_history_changed(t))
+        self.autosave.watch(tab)
         tab.annotationSelected.connect(
             lambda p, x, t=tab: self.annotations_panel.select(p, x) if t is self.current_tab() else None)
         index = self.tabs.addTab(tab, doc.display_name)
@@ -198,6 +203,7 @@ class MainWindow(WindowEventsMixin, QMainWindow):
         return tab
 
     def remove_tab(self, tab: DocumentTab) -> None:
+        self.autosave.unwatch(tab)
         index = self.tabs.indexOf(tab)
         if index >= 0:
             self.tabs.removeTab(index)
@@ -304,6 +310,9 @@ class MainWindow(WindowEventsMixin, QMainWindow):
         self.effective_theme = apply_theme(QApplication.instance(), self.settings.theme)
         self.on_theme_changed()
         self._sync_checkable_actions()
+        self.autosave.set_interval(self.settings.autosave_minutes)
+        self.tool_options.set(stroke=self.settings.annotation_color, highlight=self.settings.highlight_color,
+                              author=self.settings.author)
 
     # ------------------------------------------------------------------
     # drag & drop, window state, closing
@@ -334,8 +343,10 @@ class MainWindow(WindowEventsMixin, QMainWindow):
         self.settings.sync()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        self.save_window_state()  # before tabs close, so open panels are remembered
         if not self.file.close_all():
             event.ignore()
             return
-        self.save_window_state()
+        cancel_all_jobs()
+        self.autosave.shutdown()
         event.accept()

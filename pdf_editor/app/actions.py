@@ -139,9 +139,14 @@ def _sequences(shortcut) -> list[QKeySequence]:
     return [QKeySequence(shortcut)]
 
 
+# Dedicated keyboard "media" keys that some platforms bind to standard actions.
+_MEDIA_KEYS = {"New", "Open", "Save", "Close", "Undo", "Redo", "Copy", "Cut", "Paste", "Find", "Print", "Quit", "Help"}
+
+
 def shortcut_text(spec: ActionSpec) -> str:
-    """Human-readable shortcut(s) for the help dialog."""
-    return ", ".join(s.toString(QKeySequence.SequenceFormat.NativeText) for s in _sequences(spec.shortcut))
+    """Human-readable shortcut(s) for the help dialog (media keys such as "Open" left out)."""
+    texts = [s.toString(QKeySequence.SequenceFormat.NativeText) for s in _sequences(spec.shortcut)]
+    return ", ".join(t for t in texts if t and t.split("+")[-1] not in _MEDIA_KEYS)
 
 
 def create_actions(parent, resolve) -> dict[str, QAction]:

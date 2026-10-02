@@ -108,6 +108,18 @@ ACTIONS: list[ActionSpec] = [
     ActionSpec("annot.highlight_selection", "Highlight Selected Text", "annot.highlight_selection", "Ctrl+Shift+H", category="Comment"),
     ActionSpec("annot.underline_selection", "Underline Selected Text", "annot.underline_selection", category="Comment"),
     ActionSpec("annot.strikeout_selection", "Strike Out Selected Text", "annot.strikeout_selection", category="Comment"),
+    # -- Tools menu
+    ActionSpec("tool.redact", "&Redact Tool", "tool.redact", "D", "▇", "Mark areas for redaction", True, "tool", "Tools"),
+    ActionSpec("tools.redact", "Search && Redact / Review && Apply…", "tools.redact", "Ctrl+Shift+X", category="Tools"),
+    ActionSpec("tools.protect", "&Protect with Password…", "tools.protect", category="Tools"),
+    ActionSpec("tools.remove_password", "Remove Pass&word", "tools.remove_password", category="Tools"),
+    ActionSpec("tools.owner_password", "Enter &Owner Password…", "tools.owner_password", category="Tools"),
+    ActionSpec("tools.compress", "Reduce File &Size…", "tools.compress", category="Tools"),
+    ActionSpec("tools.ocr", "Recognize Text (&OCR)…", "tools.ocr", category="Tools"),
+    ActionSpec("tools.add_bookmark", "Add &Bookmark…", "tools.add_bookmark", "Ctrl+B", category="Tools"),
+    ActionSpec("tools.export_images", "Pages as &Images (PNG/JPG)…", "tools.export_images", category="File"),
+    ActionSpec("tools.extract_images", "Extract Embedded I&mages…", "tools.extract_images", category="File"),
+    ActionSpec("tools.export_text", "All &Text (.txt)…", "tools.export_text", category="File"),
     # -- Help
     ActionSpec("help.shortcuts", "&Keyboard Shortcuts", "help.shortcuts", "Ctrl+/", category="Help"),
     ActionSpec("help.about", "&About PDF Editor", "help.about", category="Help"),

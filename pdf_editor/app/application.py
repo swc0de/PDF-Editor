@@ -52,6 +52,7 @@ def run(argv: list[str] | None = None) -> int:
     files = [os.path.abspath(f) for f in args.files]
 
     def startup() -> None:
+        window.refresh_ocr_action()
         if not args.no_recovery and hasattr(window, "offer_recovery"):
             window.offer_recovery()
         window.file.open_paths(files)

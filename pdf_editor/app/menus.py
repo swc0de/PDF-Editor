@@ -38,6 +38,7 @@ MENUS: list[tuple[str, list[str]]] = [
 
 SUBMENUS: dict[str, tuple[str, list[str]]] = {
     "theme": ("&Theme", ["view.theme_light", "view.theme_dark", "view.theme_system"]),
+    "export": ("&Export", ["tools.export_images", "tools.extract_images", "tools.export_text"]),
 }
 
 # Optional menu sections contributed by feature controllers (key -> action keys).
@@ -61,6 +62,11 @@ SECTIONS["content"] = [
     "content.watermark", "content.header_footer", "content.page_numbers", "-", "content.flatten",
 ]
 
+SECTIONS["tools"] = [
+    "tool.redact", "tools.redact", "-", "tools.protect", "tools.remove_password", "tools.owner_password", "-",
+    "tools.compress", "tools.ocr", "-", "tools.add_bookmark", "file.properties",
+]
+
 # Context menu of the thumbnail strip.
 THUMBNAIL_MENU = [
     "pages.rotate_left", "pages.rotate_right", "-", "pages.insert_blank", "pages.insert_file",
@@ -74,7 +80,7 @@ TOOLS_TOOLBAR = [
     "tool.select", "tool.hand", "-", "tool.highlight", "tool.underline", "tool.strikeout", "-",
     "tool.pen", "tool.rectangle", "tool.ellipse", "tool.line", "tool.arrow", "-",
     "tool.note", "tool.textbox", "tool.stamp", "-", "tool.text_add", "tool.text_edit", "tool.image",
-    "tool.signature", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop",
+    "tool.signature", "tool.redact", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop",
 ]
 
 

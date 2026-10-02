@@ -284,6 +284,17 @@ class MainWindow(WindowEventsMixin, QMainWindow):
         for tab in self.tabs_list():
             tab.viewer.setBackgroundBrush(canvas_color(self.effective_theme))
 
+    def refresh_ocr_action(self) -> None:
+        """Label the OCR action when Tesseract is missing (the dialog explains how to install it)."""
+        status = self.tools.ocr_status(refresh=True)
+        action = self.actions["tools.ocr"]
+        if status.available:
+            action.setText("Recognize Text (&OCR)…")
+            action.setStatusTip("Make scanned pages searchable and selectable")
+        else:
+            action.setText("Recognize Text (OCR) — Tesseract not installed…")
+            action.setStatusTip("OCR is disabled because Tesseract is not installed. Click for instructions.")
+
     def apply_settings(self) -> None:
         """Re-read settings after the settings dialog was accepted."""
         from PySide6.QtWidgets import QApplication

@@ -13,6 +13,7 @@ from ..events import Change, ChangeEvent
 from ..errors import PermissionDenied
 from ..operations import metadata as meta_ops
 from ..operations import outline as outline_ops
+from ..operations import redact as redact_ops
 from ..operations import security as sec_ops
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -88,3 +89,39 @@ class ToolEditsMixin:
             ChangeEvent(Change.OUTLINE),
             permission=pymupdf.PDF_PERM_MODIFY,
         )
+
+    # -- redaction ----------------------------------------------------------
+    def mark_redaction(self: "PdfDocument", pno: int, rect, label: str = "") -> int:
+        """Mark an area for redaction (nothing is removed until applied)."""
+        return self.edit_pages("Mark for redaction", [pno], lambda: redact_ops.mark_area(self.raw[pno], rect, label=label),
+                               kind=Change.ANNOTATIONS)
+
+    def mark_redaction_text(self: "PdfDocument", needle: str, match_case: bool = False) -> int:
+        """Mark every occurrence of ``needle``; returns the number of marks."""
+        pages = list(redact_ops.find_text_marks(self.raw, needle, match_case))
+        if not pages:
+            return 0
+        return self.edit_pages(
+            f"Mark '{needle}' for redaction", pages,
+            lambda: len(redact_ops.mark_text(self.raw, needle, match_case, pages)), kind=Change.ANNOTATIONS,
+        )
+
+    def redaction_marks(self: "PdfDocument"):
+        return redact_ops.list_marks(self.raw)
+
+    def apply_redactions(self: "PdfDocument", scrub: bool = False) -> int:
+        """Permanently remove marked content (and optionally hidden data).
+
+        The next save is forced to be a full rewrite so the removed content
+        cannot survive in an earlier revision of the file.
+        """
+
+        def apply() -> int:
+            changed = redact_ops.apply_redactions(self.raw)
+            if scrub:
+                redact_ops.scrub_hidden_data(self.raw)
+            return changed
+
+        result = self.edit_snapshot("Apply redactions", apply)
+        self.require_full_save()
+        return result

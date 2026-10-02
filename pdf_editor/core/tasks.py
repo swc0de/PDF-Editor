@@ -54,3 +54,64 @@ def split_task(
         return page_ops.split_document(doc, [list(g) for g in groups], output_dir, base_name, progress)
     finally:
         doc.close()
+
+
+def compress_task(source: str, output: str, preset: str, password: str | None = None,
+                  original_size: int = 0, progress: Progress | None = None):
+    """Compress ``source`` into ``output``; ``original_size`` is the size reported as "before"."""
+    from .operations.optimize import CompressResult, compress_file
+
+    result = compress_file(source, output, preset, password, progress)
+    return CompressResult(result.path, original_size or result.before, result.after)
+
+
+def ocr_task(source: str, output: str, pages: Sequence[int] | None, language: str, dpi: int,
+             skip_text_pages: bool = True, password: str | None = None, progress: Progress | None = None):
+    """OCR ``source`` and write the result to ``output`` keeping object numbers stable."""
+    from .operations.ocr import ocr_document
+
+    doc = open_source(source, password)
+    try:
+        result = ocr_document(doc, pages, language, dpi, skip_text_pages, progress=progress)
+        # garbage=0 keeps existing xref numbers, so the GUI's undo history stays valid
+        doc.save(output, garbage=0, encryption=pymupdf.PDF_ENCRYPT_KEEP)
+        return result
+    finally:
+        doc.close()
+
+
+def export_images_task(source: str, output_dir: str, pages: Sequence[int] | None, fmt: str, dpi: int,
+                       base_name: str, jpg_quality: int = 90, password: str | None = None,
+                       progress: Progress | None = None) -> list[str]:
+    """Render pages to PNG/JPG files."""
+    from .operations.convert import export_page_images
+
+    doc = open_source(source, password)
+    try:
+        return export_page_images(doc, pages, output_dir, base_name, fmt, dpi, jpg_quality, progress)
+    finally:
+        doc.close()
+
+
+def extract_images_task(source: str, output_dir: str, base_name: str, min_size: int = 0,
+                        password: str | None = None, progress: Progress | None = None) -> list[str]:
+    """Save all embedded images."""
+    from .operations.convert import extract_images
+
+    doc = open_source(source, password)
+    try:
+        return extract_images(doc, output_dir, base_name, min_size, progress)
+    finally:
+        doc.close()
+
+
+def export_text_task(source: str, output: str, separators: bool = True, password: str | None = None,
+                     progress: Progress | None = None) -> int:
+    """Write all text to a .txt file; returns the number of characters."""
+    from .operations.text import export_text
+
+    doc = open_source(source, password)
+    try:
+        return export_text(doc, output, separators, progress)
+    finally:
+        doc.close()

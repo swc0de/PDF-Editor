@@ -108,27 +108,35 @@ class Job(QObject):
         if message:
             self.dialog.setLabelText(message)
 
-    def _close(self) -> None:
+    def _close_dialog(self) -> None:
         self.finished = True
         self.dialog.reset()
         self.dialog.close()
         self.dialog.deleteLater()
+
+    def _cleanup(self) -> None:
         if self.on_finally is not None:
-            self.on_finally()
+            try:
+                self.on_finally()
+            except Exception:
+                log.exception("Job clean-up failed")
 
     def _on_finished(self, result: Any) -> None:
         self.result = result
-        self._close()
+        self._close_dialog()
         try:
             if self.on_success is not None:
-                self.on_success(result)
+                self.on_success(result)  # may still need temporary files...
         except Exception as exc:
             show_error(exc, self.parent_widget)
+        finally:
+            self._cleanup()  # ...which are removed only afterwards
         self.done.emit(result)
 
     def _on_failed(self, exc: BaseException) -> None:
         self.error = exc
-        self._close()
+        self._close_dialog()
+        self._cleanup()
         if not isinstance(exc, OperationCancelled):
             show_error(exc, self.parent_widget)
         self.done.emit(None)

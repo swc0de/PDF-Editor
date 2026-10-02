@@ -150,6 +150,7 @@ class ThumbnailPanel(QListView):
     """Vertical strip of page thumbnails."""
 
     pageActivated = Signal(int)
+    deleteRequested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -175,6 +176,12 @@ class ThumbnailPanel(QListView):
         self._syncing = False
         self.clicked.connect(lambda idx: self.pageActivated.emit(idx.row()))
         self.activated.connect(lambda idx: self.pageActivated.emit(idx.row()))
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802
+        if event.key() == Qt.Key.Key_Delete and self.selected_pages():
+            self.deleteRequested.emit()
+            return
+        super().keyPressEvent(event)
 
     def selected_pages(self) -> list[int]:
         return sorted(i.row() for i in self.selectionModel().selectedIndexes()) if self.selectionModel() else []

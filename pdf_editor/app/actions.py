@@ -67,9 +67,22 @@ ACTIONS: list[ActionSpec] = [
     ActionSpec("view.panel_annotations", "&Annotations", "view.toggle_annotations", "F6", checkable=True, category="View"),
     ActionSpec("view.next_tab", "Next &Tab", "view.next_tab", ("Ctrl+Tab",), category="Navigation"),
     ActionSpec("view.prev_tab", "Previous Ta&b", "view.prev_tab", ("Ctrl+Shift+Tab",), category="Navigation"),
+    # -- Pages
+    ActionSpec("pages.rotate_left", "Rotate &Left", "pages.rotate_left", "Ctrl+Shift+L", "⟲", "Rotate selected pages counter-clockwise", category="Pages"),
+    ActionSpec("pages.rotate_right", "Rotate &Right", "pages.rotate_right", "Ctrl+Shift+R", "⟳", "Rotate selected pages clockwise", category="Pages"),
+    ActionSpec("pages.rotate_180", "Rotate 18&0°", "pages.rotate_180", category="Pages"),
+    ActionSpec("pages.delete", "&Delete Pages", "pages.delete_pages", "Shift+Del", "🗑", "Delete selected pages", category="Pages"),
+    ActionSpec("pages.duplicate", "D&uplicate Pages", "pages.duplicate_pages", "Ctrl+Shift+D", category="Pages"),
+    ActionSpec("pages.insert_blank", "Insert &Blank Page", "pages.insert_blank", "Ctrl+Shift+B", category="Pages"),
+    ActionSpec("pages.insert_file", "&Insert Pages from File…", "pages.insert_from_file", "Ctrl+Shift+I", category="Pages"),
+    ActionSpec("pages.extract", "&Extract Pages…", "pages.extract_pages", "Ctrl+Shift+E", category="Pages"),
+    ActionSpec("pages.split", "&Split Document…", "pages.split", category="Pages"),
+    ActionSpec("pages.merge", "&Merge PDFs…", "pages.merge", "Ctrl+Shift+M", "⊕", category="Pages"),
+    ActionSpec("pages.crop", "Cro&p Pages…", "pages.crop", "Ctrl+Shift+K", category="Pages"),
     # -- Tools (interactive)
     ActionSpec("tool.select", "&Select", "tool.select", "V", "⌶", "Select text, annotations and form fields", True, "tool", "Tools"),
     ActionSpec("tool.hand", "&Hand", "tool.hand", "H", "✋", "Scroll by dragging", True, "tool", "Tools"),
+    ActionSpec("tool.crop", "&Crop Tool", "tool.crop", "C", "⛶", "Draw the area of the page to keep", True, "tool", "Tools"),
     # -- Help
     ActionSpec("help.shortcuts", "&Keyboard Shortcuts", "help.shortcuts", "Ctrl+/", category="Help"),
     ActionSpec("help.about", "&About PDF Editor", "help.about", category="Help"),

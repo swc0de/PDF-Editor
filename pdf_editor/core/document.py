@@ -158,6 +158,11 @@ class PdfDocument(PageEditsMixin, AnnotationEditsMixin, ContentEditsMixin, ToolE
         return bool(self._password) or bool(self._raw.metadata and self._raw.metadata.get("encryption"))
 
     @property
+    def password(self) -> str | None:
+        """The password used to unlock the file (needed to hand it to background jobs)."""
+        return self._password
+
+    @property
     def encryption_policy(self) -> EncryptionPolicy:
         return self._encryption
 

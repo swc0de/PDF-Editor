@@ -16,6 +16,7 @@ from . import menus
 from .actions import SPECS, create_actions
 from .controllers.edit_ops import EditController, HelpController, ToolController
 from .controllers.file_ops import FileController
+from .controllers.page_ops import PageController
 from .controllers.tool_ops import ToolsController
 from .controllers.view_ops import ViewController
 from .document_tab import DocumentTab
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self.view = ViewController(self)
         self.tool_ctl = ToolController(self)
         self.tools = ToolsController(self)
+        self.pages_ctl = PageController(self)
         self.help = HelpController(self)
         self._init_extensions()
 
@@ -70,6 +72,8 @@ class MainWindow(QMainWindow):
 
         self.thumbnails = ThumbnailPanel(self)
         self.thumbnails.pageActivated.connect(lambda p: self._with_tab(lambda t: t.viewer.go_to_page(p)))
+        self.thumbnails.customContextMenuRequested.connect(self._thumbnail_menu)
+        self.thumbnails.deleteRequested.connect(lambda: self.pages_ctl.delete_pages())
         self.outline = OutlinePanel(self)
         self.outline.pageRequested.connect(lambda p: self._with_tab(lambda t: t.viewer.go_to_page(p)))
         self.docks: dict[str, QDockWidget] = {}
@@ -256,10 +260,27 @@ class MainWindow(QMainWindow):
 
     def on_pages_dropped(self, tab: DocumentTab, pages: list[int], target: int) -> None:
         """Thumbnails were dragged to a new position."""
+        self.pages_ctl.move_pages(tab, pages, target)
 
     def on_files_dropped(self, tab: DocumentTab, paths: list[str], target: int) -> None:
-        """Files were dropped onto the thumbnail strip."""
-        self.file.open_paths(paths)
+        """Files dropped onto the thumbnail strip are inserted at that position."""
+        self.pages_ctl.insert_files(tab, [p for p in paths if os.path.isfile(p)], target)
+
+    def selected_pages(self) -> list[int]:
+        """Pages selected in the thumbnail strip, or the current page."""
+        tab = self.current_tab()
+        if tab is None:
+            return []
+        pages = [p for p in self.thumbnails.selected_pages() if p < tab.doc.page_count]
+        return pages or [tab.viewer.current_page]
+
+    def _thumbnail_menu(self, pos) -> None:
+        if self.current_tab() is None:
+            return
+        index = self.thumbnails.indexAt(pos)
+        if index.isValid() and index.row() not in self.thumbnails.selected_pages():
+            self.thumbnails.setCurrentIndex(index)
+        menus.build_context_menu(self, menus.THUMBNAIL_MENU).exec(self.thumbnails.viewport().mapToGlobal(pos))
 
     def selection_menu_actions(self) -> list[QAction]:
         """Extra actions for the selected-text context menu."""

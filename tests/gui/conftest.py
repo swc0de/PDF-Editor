@@ -29,13 +29,13 @@ def window(qtbot, settings, monkeypatch):
     monkeypatch.setattr(QMessageBox, "exec", lambda self: QMessageBox.StandardButton.Ok)
     win = MainWindow(settings)
     win.resize(1200, 800)
-    qtbot.addWidget(win)
     win.show()
     yield win
-    for tab in win.tabs_list():
-        tab.doc._history.clear()  # discard changes so closing does not prompt
-        tab.doc._force_modified = False
+    # Close without "Save changes?" prompts (not registered with qtbot on purpose:
+    # its automatic close would run before this teardown and block on a prompt).
+    win.file.maybe_save = lambda tab: True
     win.close()
+    win.deleteLater()
 
 
 def pump(qtbot, seconds: float = 0.3) -> None:

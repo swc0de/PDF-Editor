@@ -56,8 +56,8 @@ class QtHistory(QObject):
         self.max_steps = max_steps
         self.stack = QUndoStack(self)
         self._commands: list[Command] = []
-        self.stack.indexChanged.connect(lambda _i: self.changed.emit())
-        self.stack.cleanChanged.connect(lambda _c: self.changed.emit())
+        self.stack.indexChanged.connect(self.changed)
+        self.stack.cleanChanged.connect(self.changed)
 
     # -- HistoryBackend ---------------------------------------------------
     def push(self, command: Command) -> list[Command]:

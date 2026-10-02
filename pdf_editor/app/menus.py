@@ -41,12 +41,24 @@ SUBMENUS: dict[str, tuple[str, list[str]]] = {
 }
 
 # Optional menu sections contributed by feature controllers (key -> action keys).
-SECTIONS: dict[str, list[str]] = {}
+SECTIONS: dict[str, list[str]] = {
+    "pages": [
+        "pages.rotate_left", "pages.rotate_right", "pages.rotate_180", "-",
+        "pages.insert_blank", "pages.insert_file", "pages.duplicate", "pages.delete", "-",
+        "pages.extract", "pages.split", "pages.merge", "-", "pages.crop", "tool.crop",
+    ],
+}
+
+# Context menu of the thumbnail strip.
+THUMBNAIL_MENU = [
+    "pages.rotate_left", "pages.rotate_right", "-", "pages.insert_blank", "pages.insert_file",
+    "pages.duplicate", "pages.delete", "-", "pages.extract", "pages.crop",
+]
 
 MAIN_TOOLBAR = ["file.open", "file.save", "file.print", "-", "edit.undo", "edit.redo", "-",
                 "view.zoom_out", "@zoom", "view.zoom_in", "view.fit_width", "view.fit_page", "-",
                 "view.prev_page", "@page", "view.next_page"]
-TOOLS_TOOLBAR = ["tool.select", "tool.hand"]
+TOOLS_TOOLBAR = ["tool.select", "tool.hand", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop"]
 
 
 def _fill(window: "MainWindow", menu: QMenu, keys: list[str]) -> None:
@@ -64,6 +76,12 @@ def _fill(window: "MainWindow", menu: QMenu, keys: list[str]) -> None:
                 _fill(window, menu, SECTIONS[name])
         elif key in window.actions:
             menu.addAction(window.actions[key])
+
+
+def build_context_menu(window: "MainWindow", keys: list[str]) -> QMenu:
+    menu = QMenu(window)
+    _fill(window, menu, keys)
+    return menu
 
 
 def build_menus(window: "MainWindow") -> None:

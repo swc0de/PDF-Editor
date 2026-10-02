@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .base import PageEvent, Tool
+from .crop_tool import CropTool
 from .text_select import HandTool, TextSelectTool
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -13,6 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover
 TOOL_CLASSES: dict[str, type[Tool]] = {
     "select": TextSelectTool,
     "hand": HandTool,
+    "crop": CropTool,
 }
 
 

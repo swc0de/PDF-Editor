@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QLabel, QMenu, QVBoxLayout, QWidget
 from ..core.document import PdfDocument
 from ..core.events import Change, ChangeEvent
 from ..settings import Settings
-from .errors import show_error, show_warning
+from .errors import guarded, show_error, show_warning
 from .render_cache import RenderScheduler
 from .search import SearchController
 from .tools import create_tool
@@ -30,11 +30,13 @@ class DocumentTab(QWidget):
     zoomChanged = Signal(float)
     toolChanged = Signal(str)
     selectionChanged = Signal()
+    annotationSelected = Signal(object, object)  # page, xref (None, None = cleared)
 
-    def __init__(self, doc: PdfDocument, settings: Settings, parent: QWidget | None = None) -> None:
+    def __init__(self, doc: PdfDocument, settings: Settings, tool_options, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.doc = doc
         self.settings = settings
+        self.tool_options = tool_options
         self.history = QtHistory(settings.undo_memory_mb * MB, parent=self)
         doc.set_history(self.history)
         self.scheduler = RenderScheduler(doc, parent=self)
@@ -140,6 +142,36 @@ class DocumentTab(QWidget):
                 menu.addAction(action)
         menu.exec(event.global_pos)
         return True
+
+    # -- annotations and form widgets ------------------------------------------------
+    def annotation_selected(self, pno: int | None, xref: int | None) -> None:
+        self.annotationSelected.emit(pno, xref)
+
+    def select_annotation(self, pno: int, xref: int) -> None:
+        """Switch to the Select tool and select (and reveal) an annotation."""
+        self.set_tool("select")
+        self.tool("select").select_annotation(pno, xref, scroll=True)
+
+    def edit_annotation(self, pno: int, xref: int, properties: bool = False) -> None:
+        """Open the properties dialog (focused on the text for notes/text boxes)."""
+        from .dialogs.annotation_props import AnnotationPropertiesDialog
+
+        info = self.doc.annotation_info(pno, xref)
+        if info is None:
+            return
+        dialog = AnnotationPropertiesDialog(info, self, focus_text=not properties)
+        if dialog.exec():
+            style, text = dialog.changes()
+            with guarded(self, "Cannot change annotation"):
+                self.doc.update_annotation(pno, xref, text, **style)
+
+    def widget_at(self, event: PageEvent):
+        """The form field under the cursor, if any (for form filling)."""
+        return None
+
+    def handle_widget_click(self, event: PageEvent) -> bool:
+        """Start editing a form field under the cursor; True if one was hit."""
+        return False
 
     # -- document events ------------------------------------------------------------
     def _on_document_event(self, event: ChangeEvent) -> None:

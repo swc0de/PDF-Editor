@@ -6,7 +6,7 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QCloseEvent, QCursor, QDragEnterEvent, QDropEvent
-from PySide6.QtWidgets import QDockWidget, QLabel, QMainWindow, QStackedWidget, QTabWidget, QWidget
+from PySide6.QtWidgets import QDockWidget, QMainWindow, QStackedWidget, QTabWidget, QWidget
 
 from .. import APP_NAME
 from ..core.document import PdfDocument
@@ -14,6 +14,8 @@ from ..core.events import Change
 from ..settings import Settings
 from . import menus
 from .actions import SPECS, create_actions
+from .annotations_panel import AnnotationsPanel
+from .controllers.annotate_ops import AnnotController
 from .controllers.edit_ops import EditController, HelpController, ToolController
 from .controllers.file_ops import FileController
 from .controllers.page_ops import PageController
@@ -25,6 +27,8 @@ from .qt_utils import glyph_icon
 from .search import SearchBar
 from .theme import canvas_color
 from .thumbnails import ThumbnailModel, ThumbnailPanel
+from .tool_options import ToolOptions, ToolOptionsBar
+from .tools import TOOL_CLASSES
 from .widgets import PageNumberBox, StatusLabels, WelcomePage, ZoomBox
 
 
@@ -48,7 +52,9 @@ class MainWindow(QMainWindow):
         self.tool_ctl = ToolController(self)
         self.tools = ToolsController(self)
         self.pages_ctl = PageController(self)
+        self.annot_ctl = AnnotController(self)
         self.help = HelpController(self)
+        self.tool_options = ToolOptions(settings, self)
         self._init_extensions()
 
         self.page_box = PageNumberBox(self)
@@ -79,12 +85,18 @@ class MainWindow(QMainWindow):
         self.docks: dict[str, QDockWidget] = {}
         self._add_dock("thumbnails", "Pages", self.thumbnails, Qt.DockWidgetArea.LeftDockWidgetArea)
         self._add_dock("outline", "Bookmarks", self.outline, Qt.DockWidgetArea.LeftDockWidgetArea)
-        self._add_dock("annotations", "Annotations", self._annotations_widget(), Qt.DockWidgetArea.RightDockWidgetArea)
+        self.annotations_panel = AnnotationsPanel(self)
+        self.annotations_panel.annotationActivated.connect(
+            lambda p, x: self._with_tab(lambda t: t.select_annotation(p, x)))
+        self.annotations_panel.deleteRequested.connect(
+            lambda p, x: self._with_tab(lambda t: t.doc.delete_annotation(p, x)))
+        self._add_dock("annotations", "Annotations", self.annotations_panel, Qt.DockWidgetArea.RightDockWidgetArea)
         self.tabifyDockWidget(self.docks["thumbnails"], self.docks["outline"])
         self.docks["thumbnails"].raise_()
 
         self.page_box.pageRequested.connect(lambda p: self._with_tab(lambda t: t.viewer.go_to_page(p)))
         self.zoom_box.zoomRequested.connect(self.view.apply_zoom_request)
+        self.options_bar = ToolOptionsBar(self.tool_options, self)
         menus.build_toolbars(self)
         menus.build_menus(self)
         self.status = StatusLabels(self.statusBar())
@@ -107,11 +119,6 @@ class MainWindow(QMainWindow):
         if controller is None or not hasattr(controller, method):
             raise AttributeError(f"No handler for action '{handler}'")
         return getattr(controller, method)
-
-    def _annotations_widget(self) -> QWidget:
-        label = QLabel("Annotations appear here.", self)
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        return label
 
     def _add_dock(self, name: str, title: str, widget: QWidget, area: Qt.DockWidgetArea) -> None:
         dock = QDockWidget(title, self)
@@ -166,7 +173,7 @@ class MainWindow(QMainWindow):
         return None
 
     def add_document(self, doc: PdfDocument) -> DocumentTab:
-        tab = DocumentTab(doc, self.settings, self)
+        tab = DocumentTab(doc, self.settings, self.tool_options, self)
         tab.viewer.setBackgroundBrush(canvas_color(self.effective_theme))
         tab.thumb_model = ThumbnailModel(doc, tab.scheduler, self.devicePixelRatioF(), tab)
         tab.thumb_model.pagesDropped.connect(lambda pages, target, t=tab: self.on_pages_dropped(t, pages, target))
@@ -177,6 +184,8 @@ class MainWindow(QMainWindow):
         tab.zoomChanged.connect(lambda _z, t=tab: self._on_zoom_changed(t))
         tab.toolChanged.connect(lambda name, t=tab: self._on_tool_changed(t, name))
         tab.history.changed.connect(lambda t=tab: self._on_history_changed(t))
+        tab.annotationSelected.connect(
+            lambda p, x, t=tab: self.annotations_panel.select(p, x) if t is self.current_tab() else None)
         index = self.tabs.addTab(tab, doc.display_name)
         self.tabs.setTabToolTip(index, doc.path or doc.display_name)
         self.tabs.setCurrentIndex(index)
@@ -219,7 +228,8 @@ class MainWindow(QMainWindow):
         self.update_ui()
 
     def bind_panels(self, tab: DocumentTab | None) -> None:
-        """Hook for registering additional panels."""
+        """Point the side panels at ``tab``."""
+        self.annotations_panel.set_tab(tab)
 
     # ------------------------------------------------------------------
     # tab events
@@ -233,6 +243,7 @@ class MainWindow(QMainWindow):
             tab.thumb_model.refresh(list(event.pages) if event.pages else None)
         if event.kind in (Change.OUTLINE, Change.RELOAD, Change.STRUCTURE):
             self.outline.reload()
+        self.annotations_panel.on_document_event(event)
         self.update_ui()
 
     def _on_page_changed(self, tab: DocumentTab) -> None:
@@ -249,6 +260,9 @@ class MainWindow(QMainWindow):
             action = self.actions.get(f"tool.{name}")
             if action is not None:
                 action.setChecked(True)
+            cls = TOOL_CLASSES.get(name)
+            self.options_bar.show_for(set(getattr(cls, "options_used", set())), getattr(cls, "hint", "") or
+                                      getattr(cls, "tooltip", ""))
 
     def _on_history_changed(self, tab: DocumentTab) -> None:
         if tab is self.current_tab():
@@ -284,7 +298,8 @@ class MainWindow(QMainWindow):
 
     def selection_menu_actions(self) -> list[QAction]:
         """Extra actions for the selected-text context menu."""
-        return []
+        keys = ["annot.highlight_selection", "annot.underline_selection", "annot.strikeout_selection"]
+        return [self.actions[k] for k in keys if k in self.actions]
 
     # ------------------------------------------------------------------
     # UI state

@@ -4,17 +4,33 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .annotate_tools import (
+    ArrowTool,
+    EllipseTool,
+    HighlightTool,
+    LineTool,
+    NoteTool,
+    PenTool,
+    RectangleTool,
+    StampTool,
+    StrikeoutTool,
+    TextBoxTool,
+    UnderlineTool,
+)
 from .base import PageEvent, Tool
 from .crop_tool import CropTool
-from .text_select import HandTool, TextSelectTool
+from .select_tool import SelectTool
+from .text_select import HandTool
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..document_tab import DocumentTab
 
 TOOL_CLASSES: dict[str, type[Tool]] = {
-    "select": TextSelectTool,
-    "hand": HandTool,
-    "crop": CropTool,
+    cls.name: cls
+    for cls in (
+        SelectTool, HandTool, CropTool, HighlightTool, UnderlineTool, StrikeoutTool, PenTool,
+        RectangleTool, EllipseTool, LineTool, ArrowTool, NoteTool, TextBoxTool, StampTool,
+    )
 }
 
 

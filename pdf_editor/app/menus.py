@@ -49,6 +49,13 @@ SECTIONS: dict[str, list[str]] = {
     ],
 }
 
+SECTIONS["annotate"] = [
+    "tool.highlight", "tool.underline", "tool.strikeout", "-",
+    "annot.highlight_selection", "annot.underline_selection", "annot.strikeout_selection", "-",
+    "tool.pen", "tool.rectangle", "tool.ellipse", "tool.line", "tool.arrow", "-",
+    "tool.note", "tool.textbox", "tool.stamp", "-", "annot.properties", "annot.delete",
+]
+
 # Context menu of the thumbnail strip.
 THUMBNAIL_MENU = [
     "pages.rotate_left", "pages.rotate_right", "-", "pages.insert_blank", "pages.insert_file",
@@ -58,7 +65,11 @@ THUMBNAIL_MENU = [
 MAIN_TOOLBAR = ["file.open", "file.save", "file.print", "-", "edit.undo", "edit.redo", "-",
                 "view.zoom_out", "@zoom", "view.zoom_in", "view.fit_width", "view.fit_page", "-",
                 "view.prev_page", "@page", "view.next_page"]
-TOOLS_TOOLBAR = ["tool.select", "tool.hand", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop"]
+TOOLS_TOOLBAR = [
+    "tool.select", "tool.hand", "-", "tool.highlight", "tool.underline", "tool.strikeout", "-",
+    "tool.pen", "tool.rectangle", "tool.ellipse", "tool.line", "tool.arrow", "-",
+    "tool.note", "tool.textbox", "tool.stamp", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop",
+]
 
 
 def _fill(window: "MainWindow", menu: QMenu, keys: list[str]) -> None:
@@ -124,3 +135,4 @@ def build_toolbars(window: "MainWindow") -> None:
     tools.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
     window.addToolBar(Qt.ToolBarArea.TopToolBarArea, tools)
     window.tools_toolbar = tools
+    window.addToolBar(Qt.ToolBarArea.TopToolBarArea, window.options_bar)

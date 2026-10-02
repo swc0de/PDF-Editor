@@ -1,5 +1,6 @@
 """Allow ``python -m pdf_editor``."""
 
-from .main import main
+from pdf_editor.main import main
 
-raise SystemExit(main())
+if __name__ == "__main__":  # guard: spawned job processes re-import this module
+    raise SystemExit(main())

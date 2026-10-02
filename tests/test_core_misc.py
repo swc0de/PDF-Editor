@@ -169,3 +169,21 @@ def test_safe_filename():
 
 def test_normalized_rect():
     assert utils.normalized_rect(10, 20, 0, 5) == pymupdf.Rect(0, 5, 10, 20)
+
+
+def test_core_never_imports_pyside6():
+    """The core layer must stay GUI-free (checked in a fresh interpreter)."""
+    import subprocess
+    import sys
+
+    code = (
+        "import importlib, pkgutil, sys, pdf_editor.core as core\n"
+        "for m in pkgutil.walk_packages(core.__path__, 'pdf_editor.core.'):\n"
+        "    importlib.import_module(m.name)\n"
+        "print('PySide6' in sys.modules)\n"
+    )
+    import os
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=root, check=True)
+    assert out.stdout.strip() == "False"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import faulthandler
 import os
 import shutil
 import sys
@@ -14,6 +15,14 @@ if ROOT not in sys.path:
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from tests.fixtures import builders  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _hang_guard():
+    """Fail loudly (with a traceback) instead of hanging forever on a modal dialog."""
+    faulthandler.dump_traceback_later(120, exit=True)
+    yield
+    faulthandler.cancel_dump_traceback_later()
 
 
 @pytest.fixture

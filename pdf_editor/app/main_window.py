@@ -5,17 +5,17 @@ from __future__ import annotations
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QCloseEvent, QCursor, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QCloseEvent, QCursor, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QStackedWidget, QTabWidget, QWidget
 
 from .. import APP_NAME
 from ..core.document import PdfDocument
-from ..core.events import Change
 from ..settings import Settings
 from . import menus
 from .actions import SPECS, create_actions
 from .annotations_panel import AnnotationsPanel
 from .controllers.annotate_ops import AnnotController
+from .controllers.content_ops import ContentController
 from .controllers.edit_ops import EditController, HelpController, ToolController
 from .controllers.file_ops import FileController
 from .controllers.page_ops import PageController
@@ -28,11 +28,11 @@ from .search import SearchBar
 from .theme import canvas_color
 from .thumbnails import ThumbnailModel, ThumbnailPanel
 from .tool_options import ToolOptions, ToolOptionsBar
-from .tools import TOOL_CLASSES
 from .widgets import PageNumberBox, StatusLabels, WelcomePage, ZoomBox
+from .window_events import WindowEventsMixin
 
 
-class MainWindow(QMainWindow):
+class MainWindow(WindowEventsMixin, QMainWindow):
     """Top-level window holding one tab per open document."""
 
     def __init__(self, settings: Settings, effective_theme: str = "light") -> None:
@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
         self.tools = ToolsController(self)
         self.pages_ctl = PageController(self)
         self.annot_ctl = AnnotController(self)
+        self.content_ctl = ContentController(self)
         self.help = HelpController(self)
         self.tool_options = ToolOptions(settings, self)
         self._init_extensions()
@@ -96,7 +97,10 @@ class MainWindow(QMainWindow):
 
         self.page_box.pageRequested.connect(lambda p: self._with_tab(lambda t: t.viewer.go_to_page(p)))
         self.zoom_box.zoomRequested.connect(self.view.apply_zoom_request)
-        self.options_bar = ToolOptionsBar(self.tool_options, self)
+        self.options_bar = ToolOptionsBar(self.tool_options, self, settings)
+        self.options_bar.signatureNewRequested.connect(self.create_signature)
+        self.options_bar.signatureDeleteRequested.connect(self.content_ctl.delete_signature)
+        self.options_bar.refresh_signatures()
         menus.build_toolbars(self)
         menus.build_menus(self)
         self.status = StatusLabels(self.statusBar())
@@ -230,76 +234,6 @@ class MainWindow(QMainWindow):
     def bind_panels(self, tab: DocumentTab | None) -> None:
         """Point the side panels at ``tab``."""
         self.annotations_panel.set_tab(tab)
-
-    # ------------------------------------------------------------------
-    # tab events
-    def _on_document_changed(self, tab: DocumentTab, event) -> None:
-        if tab is not self.current_tab():
-            return
-        if event.kind in (Change.STRUCTURE, Change.RELOAD):
-            tab.thumb_model.refresh(None)
-            self.thumbnails.sync_current(tab.viewer.current_page)
-        elif event.kind in (Change.CONTENT, Change.ANNOTATIONS, Change.FORMS):
-            tab.thumb_model.refresh(list(event.pages) if event.pages else None)
-        if event.kind in (Change.OUTLINE, Change.RELOAD, Change.STRUCTURE):
-            self.outline.reload()
-        self.annotations_panel.on_document_event(event)
-        self.update_ui()
-
-    def _on_page_changed(self, tab: DocumentTab) -> None:
-        if tab is self.current_tab():
-            self.thumbnails.sync_current(tab.viewer.current_page)
-            self.update_ui()
-
-    def _on_zoom_changed(self, tab: DocumentTab) -> None:
-        if tab is self.current_tab():
-            self.update_ui()
-
-    def _on_tool_changed(self, tab: DocumentTab, name: str) -> None:
-        if tab is self.current_tab():
-            action = self.actions.get(f"tool.{name}")
-            if action is not None:
-                action.setChecked(True)
-            cls = TOOL_CLASSES.get(name)
-            self.options_bar.show_for(set(getattr(cls, "options_used", set())), getattr(cls, "hint", "") or
-                                      getattr(cls, "tooltip", ""))
-
-    def _on_history_changed(self, tab: DocumentTab) -> None:
-        if tab is self.current_tab():
-            self.update_ui()
-
-    def on_document_saved(self, tab: DocumentTab) -> None:
-        self._update_tab_title(tab)
-        self.update_ui()
-
-    def on_pages_dropped(self, tab: DocumentTab, pages: list[int], target: int) -> None:
-        """Thumbnails were dragged to a new position."""
-        self.pages_ctl.move_pages(tab, pages, target)
-
-    def on_files_dropped(self, tab: DocumentTab, paths: list[str], target: int) -> None:
-        """Files dropped onto the thumbnail strip are inserted at that position."""
-        self.pages_ctl.insert_files(tab, [p for p in paths if os.path.isfile(p)], target)
-
-    def selected_pages(self) -> list[int]:
-        """Pages selected in the thumbnail strip, or the current page."""
-        tab = self.current_tab()
-        if tab is None:
-            return []
-        pages = [p for p in self.thumbnails.selected_pages() if p < tab.doc.page_count]
-        return pages or [tab.viewer.current_page]
-
-    def _thumbnail_menu(self, pos) -> None:
-        if self.current_tab() is None:
-            return
-        index = self.thumbnails.indexAt(pos)
-        if index.isValid() and index.row() not in self.thumbnails.selected_pages():
-            self.thumbnails.setCurrentIndex(index)
-        menus.build_context_menu(self, menus.THUMBNAIL_MENU).exec(self.thumbnails.viewport().mapToGlobal(pos))
-
-    def selection_menu_actions(self) -> list[QAction]:
-        """Extra actions for the selected-text context menu."""
-        keys = ["annot.highlight_selection", "annot.underline_selection", "annot.strikeout_selection"]
-        return [self.actions[k] for k in keys if k in self.actions]
 
     # ------------------------------------------------------------------
     # UI state

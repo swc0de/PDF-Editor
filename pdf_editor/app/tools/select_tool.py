@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import pymupdf
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QCursor, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import QMenu
 

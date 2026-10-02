@@ -259,12 +259,16 @@ class PdfDocument(PageEditsMixin, AnnotationEditsMixin, ContentEditsMixin, ToolE
         action: Callable[[], Any],
         kind: str = Change.CONTENT,
         permission: int | None = pymupdf.PDF_PERM_MODIFY,
+        deep: bool = False,
     ) -> Any:
-        """Edit content or annotations of ``pages`` with page-level undo state."""
+        """Edit content or annotations of ``pages`` with page-level undo state.
+
+        ``deep`` also records the pages' Form XObjects (needed for redaction).
+        """
         pages = tuple(sorted(set(pages)))
 
         def xrefs() -> list[int]:
-            return [x for p in pages for x in objstate.page_object_xrefs(self._raw, p)]
+            return [x for p in pages for x in objstate.page_object_xrefs(self._raw, p, deep)]
 
         return self.edit_objects(label, xrefs, action, ChangeEvent(kind, pages), permission)
 

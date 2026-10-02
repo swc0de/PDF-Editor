@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLineEdit, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 
 from ..actions import ACTIONS, shortcut_text

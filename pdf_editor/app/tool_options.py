@@ -44,6 +44,7 @@ class ToolOptions(QObject):
         self.stamp_image: str | None = None
         self.note_icon = "Note"
         self.author = settings.author
+        self.signature: bytes | None = None
 
     def stroke_rgb(self) -> tuple[float, float, float]:
         return rgb_floats(qcolor(self.stroke))
@@ -63,10 +64,14 @@ class ToolOptions(QObject):
 class ToolOptionsBar(QToolBar):
     """Shows the options relevant to the active tool."""
 
-    def __init__(self, options: ToolOptions, parent: QWidget | None = None) -> None:
+    signatureNewRequested = Signal()
+    signatureDeleteRequested = Signal(int)
+
+    def __init__(self, options: ToolOptions, parent: QWidget | None = None, settings: Settings | None = None) -> None:
         super().__init__("Tool Options", parent)
         self.setObjectName("toolOptionsToolbar")
         self.options = options
+        self.settings = settings
         self._actions: dict[str, list] = {}
 
         self.color_button = self._color_button("Colour", lambda: options.stroke, lambda c: options.set(stroke=c))
@@ -109,6 +114,16 @@ class ToolOptionsBar(QToolBar):
         self._add("font", [QLabel(" Size ", self), self.font_size])
         self._add("stamp", [QLabel(" Stamp ", self), self.stamp])
         self._add("icon", [QLabel(" Icon ", self), self.icon])
+        self.signature = QComboBox(self)
+        self.signature.setMinimumWidth(150)
+        self.signature.currentIndexChanged.connect(self._signature_changed)
+        new_sig = QToolButton(self)
+        new_sig.setText("New…")
+        new_sig.clicked.connect(self.signatureNewRequested)
+        del_sig = QToolButton(self)
+        del_sig.setText("Delete")
+        del_sig.clicked.connect(lambda: self.signatureDeleteRequested.emit(self.signature.currentIndex()))
+        self._add("signature", [QLabel(" Signature ", self), self.signature, new_sig, del_sig])
         self.hint = QLabel("", self)
         self.hint.setContentsMargins(10, 0, 0, 0)
         self.addWidget(self.hint)
@@ -145,6 +160,26 @@ class ToolOptionsBar(QToolBar):
                 self.stamp.setCurrentIndex(0)
         else:
             self.options.set(stamp=text, stamp_image=None)
+
+    def refresh_signatures(self, select: int | None = None) -> None:
+        """Reload the saved signatures into the picker."""
+        signatures = self.settings.signatures() if self.settings is not None else []
+        self.signature.blockSignals(True)
+        self.signature.clear()
+        for sig in signatures:
+            self.signature.addItem(sig.name)
+        self.signature.blockSignals(False)
+        if signatures:
+            index = len(signatures) - 1 if select is None else max(0, min(select, len(signatures) - 1))
+            self.signature.setCurrentIndex(index)
+            self._signature_changed(index)
+        elif self.settings is not None:
+            self.options.set(signature=None)
+
+    def _signature_changed(self, index: int) -> None:
+        signatures = self.settings.signatures() if self.settings is not None else []
+        if 0 <= index < len(signatures):
+            self.options.set(signature=signatures[index].png)
 
     def show_for(self, names: set[str], hint: str) -> None:
         """Show only the option groups in ``names``."""

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QLabel, QMenu, QVBoxLayout, QWidget
 
@@ -10,6 +10,7 @@ from ..core.document import PdfDocument
 from ..core.events import Change, ChangeEvent
 from ..settings import Settings
 from .errors import guarded, show_error, show_warning
+from .form_filler import FormFiller
 from .render_cache import RenderScheduler
 from .search import SearchController
 from .tools import create_tool
@@ -43,6 +44,7 @@ class DocumentTab(QWidget):
         self.viewer = PdfViewer(doc, self.scheduler, self)
         self.text_selector = TextSelector(self)
         self.search = SearchController(self)
+        self.form_filler = FormFiller(self)
         self._tools: dict[str, Tool] = {}
         self.tool_name = ""
 
@@ -166,12 +168,15 @@ class DocumentTab(QWidget):
                 self.doc.update_annotation(pno, xref, text, **style)
 
     def widget_at(self, event: PageEvent):
-        """The form field under the cursor, if any (for form filling)."""
-        return None
+        """The form field under the cursor, if any."""
+        return self.form_filler.field_at(event.pno, event.point)
 
     def handle_widget_click(self, event: PageEvent) -> bool:
-        """Start editing a form field under the cursor; True if one was hit."""
-        return False
+        """Toggle/edit a form field under the cursor; True if one was hit."""
+        field = self.form_filler.field_at(event.pno, event.point)
+        if field is None:
+            return False
+        return self.form_filler.click(event.pno, field, event.global_pos)
 
     # -- document events ------------------------------------------------------------
     def _on_document_event(self, event: ChangeEvent) -> None:

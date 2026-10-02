@@ -56,6 +56,11 @@ SECTIONS["annotate"] = [
     "tool.note", "tool.textbox", "tool.stamp", "-", "annot.properties", "annot.delete",
 ]
 
+SECTIONS["content"] = [
+    "tool.text_add", "tool.text_edit", "tool.image", "-", "tool.signature", "content.new_signature", "-",
+    "content.watermark", "content.header_footer", "content.page_numbers", "-", "content.flatten",
+]
+
 # Context menu of the thumbnail strip.
 THUMBNAIL_MENU = [
     "pages.rotate_left", "pages.rotate_right", "-", "pages.insert_blank", "pages.insert_file",
@@ -68,7 +73,8 @@ MAIN_TOOLBAR = ["file.open", "file.save", "file.print", "-", "edit.undo", "edit.
 TOOLS_TOOLBAR = [
     "tool.select", "tool.hand", "-", "tool.highlight", "tool.underline", "tool.strikeout", "-",
     "tool.pen", "tool.rectangle", "tool.ellipse", "tool.line", "tool.arrow", "-",
-    "tool.note", "tool.textbox", "tool.stamp", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop",
+    "tool.note", "tool.textbox", "tool.stamp", "-", "tool.text_add", "tool.text_edit", "tool.image",
+    "tool.signature", "-", "pages.rotate_left", "pages.rotate_right", "tool.crop",
 ]
 
 

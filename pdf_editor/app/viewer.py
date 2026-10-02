@@ -10,7 +10,7 @@ from __future__ import annotations
 import bisect
 
 import pymupdf
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, QRectF, QTimer, Signal
 from PySide6.QtGui import QPainter, QTransform
 from PySide6.QtWidgets import QFrame, QGraphicsScene, QGraphicsView
 

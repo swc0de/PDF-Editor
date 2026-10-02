@@ -99,8 +99,8 @@ def form_pdf(path: str) -> str:
 
     add(pymupdf.PDF_WIDGET_TYPE_TEXT, "name", (72, 80, 300, 100), field_value="")
     add(pymupdf.PDF_WIDGET_TYPE_CHECKBOX, "agree", (72, 110, 90, 128), field_value=False)
-    add(pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON, "size", (72, 140, 90, 158), field_value=False)
-    add(pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON, "size", (100, 140, 118, 158), field_value=False)
+    add(pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON, "size_tmp1", (72, 140, 90, 158), field_value=False)
+    add(pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON, "size_tmp2", (100, 140, 118, 158), field_value=False)
     add(
         pymupdf.PDF_WIDGET_TYPE_COMBOBOX,
         "color",
@@ -115,9 +115,28 @@ def form_pdf(path: str) -> str:
         choice_values=["Apple", "Banana", "Cherry"],
         field_value="Apple",
     )
+    _group_radios(doc, page, "size", ["Small", "Large"])
     doc.save(path, deflate=True)
     doc.close()
     return path
+
+
+def _group_radios(doc, page, name: str, states: list[str]) -> None:
+    """Turn the separate radio widgets into one radio group with distinct on-states."""
+    radios = [w.xref for w in page.widgets() if w.field_type == pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON]
+    parent = doc.get_new_xref()
+    kids = " ".join(f"{x} 0 R" for x in radios)
+    doc.update_object(parent, f"<< /FT /Btn /Ff 49152 /T ({name}) /Kids [{kids}] /V /Off >>")
+    for xref, state in zip(radios, states):
+        ap = doc.xref_get_key(xref, "AP/N")[1].replace("/Yes", f"/{state}")
+        doc.xref_set_key(xref, "AP/N", ap)
+        doc.xref_set_key(xref, "Parent", f"{parent} 0 R")
+        for key in ("T", "FT", "Ff"):
+            doc.xref_set_key(xref, key, "null")
+    _kind, fields = doc.xref_get_key(doc.pdf_catalog(), "AcroForm/Fields")
+    keep = [f for f in fields.strip("[]").split(" 0 R") if f.strip() and int(f) not in radios]
+    refs = " ".join(f"{int(f)} 0 R" for f in keep) + f" {parent} 0 R"
+    doc.xref_set_key(doc.pdf_catalog(), "AcroForm/Fields", f"[{refs}]")
 
 
 def annotated_pdf(path: str) -> str:

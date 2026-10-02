@@ -6,11 +6,10 @@ import os
 
 import pymupdf
 import pytest
-from PySide6.QtCore import QByteArray, QItemSelectionModel, QMimeData, QModelIndex, Qt, QUrl
+from PySide6.QtCore import QItemSelectionModel, QMimeData, QModelIndex, Qt, QUrl
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from tests.fixtures import builders
-from tests.gui.conftest import pump
 
 pytestmark = pytest.mark.gui
 

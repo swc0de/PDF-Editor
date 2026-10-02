@@ -18,6 +18,7 @@ from .annotate_tools import (
     UnderlineTool,
 )
 from .base import PageEvent, Tool
+from .content_tools import AddTextTool, EditTextTool, ImageTool, SignatureTool
 from .crop_tool import CropTool
 from .select_tool import SelectTool
 from .text_select import HandTool
@@ -30,6 +31,7 @@ TOOL_CLASSES: dict[str, type[Tool]] = {
     for cls in (
         SelectTool, HandTool, CropTool, HighlightTool, UnderlineTool, StrikeoutTool, PenTool,
         RectangleTool, EllipseTool, LineTool, ArrowTool, NoteTool, TextBoxTool, StampTool,
+        AddTextTool, EditTextTool, ImageTool, SignatureTool,
     )
 }
 

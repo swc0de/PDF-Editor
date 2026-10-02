@@ -62,12 +62,14 @@ def state_size(state: ObjectState) -> int:
     return sum(len(src) + (len(raw) if raw else 0) for src, raw in state.values()) + 64 * len(state)
 
 
-def page_object_xrefs(doc: pymupdf.Document, pno: int) -> list[int]:
+def page_object_xrefs(doc: pymupdf.Document, pno: int, deep: bool = False) -> list[int]:
     """Objects that page-content and annotation edits on page ``pno`` modify.
 
     Covers the page dictionary, its content streams (and an indirect
     ``/Contents`` array), an indirect ``/Annots`` array, and an indirect
-    ``/Resources`` dictionary with its indirect sub-dictionaries.
+    ``/Resources`` dictionary with its indirect sub-dictionaries. With
+    ``deep`` the page's Form XObjects (not images) are included too, because
+    text redaction may rewrite text drawn inside them.
     """
     page_xref = doc.page_xref(pno)
     xrefs = [page_xref]
@@ -93,7 +95,28 @@ def page_object_xrefs(doc: pymupdf.Document, pno: int) -> list[int]:
             sub_kind, sub_value = doc.xref_get_key(page_xref, f"Resources/{sub}")
             if sub_kind == "xref":
                 xrefs += _refs(sub_value)
+    if deep:
+        xrefs += form_xobject_xrefs(doc, pno)
     return list(dict.fromkeys(xrefs))
+
+
+def form_xobject_xrefs(doc: pymupdf.Document, pno: int) -> list[int]:
+    """Form XObjects used by a page, including nested ones (images excluded)."""
+    seen: list[int] = []
+    pending = [x[0] for x in doc.get_page_xobjects(pno)]
+    while pending:
+        xref = pending.pop()
+        if xref in seen or not doc.xref_is_stream(xref):
+            continue
+        kind, subtype = doc.xref_get_key(xref, "Subtype")
+        if subtype != "/Form":
+            continue
+        seen.append(xref)
+        kind, value = doc.xref_get_key(xref, "Resources/XObject")
+        if kind in ("dict", "xref"):
+            refs = _refs(value) if kind == "dict" else _refs(doc.xref_object(_refs(value)[0], compressed=False))
+            pending += refs
+    return seen
 
 
 def annot_object_xrefs(doc: pymupdf.Document, annot_xref: int) -> list[int]:

@@ -1,12 +1,64 @@
+# Python and tooling
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
 *.egg-info/
 build/
 dist/
+*.spec
+
+# Virtual environments and local configuration (may hold secrets or local paths)
 .venv/
 venv/
+env/
+.env
+.env.*
+.idea/
+.vscode/
+*.code-workspace
+
+# Logs (including rotated backups such as pdf_editor.log.1)
 *.log
-# test output and local scratch files
+*.log.*
+
+# OS and editor junk (Thumbs.db holds previews of images in the folder)
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.swp
+*~
+
+# Keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Documents and anything exported from them: keep personal files out of the repo.
+# Tests generate their fixtures, so no document or image belongs in version control.
+*.[pP][dD][fF]
+*.[pP][nN][gG]
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[jJ][pP][xX]
+*.[jJ][pP]2
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+*.[bB][mM][pP]
+*.[gG][iI][fF]
+*.[wW][eE][bB][pP]
+*.[xX][pP][sS]
+*.[eE][pP][uU][bB]
+*.[cC][bB][zZ]
+*.txt
+!requirements*.txt
+
+# Test output and local scratch files
 /tests/_output/
-*.pdf

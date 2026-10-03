@@ -14,7 +14,9 @@ protect, compress, OCR and export PDFs, with undo/redo for every change.
 
 ## Setup
 
-Requirements: **Python 3.11+** on Windows, macOS or Linux.
+Requirements: **Python 3.11 or newer** on Windows, macOS or Linux. Check with
+`python --version` first: older versions (3.9, 3.10) cannot run the editor, and
+it stops with a message saying so.
 
 ```bash
 git clone <this repository>
@@ -24,6 +26,12 @@ python -m venv .venv
 pip install -r requirements.txt
 python -m pdf_editor                  # or: python -m pdf_editor file1.pdf file2.pdf
 ```
+
+**Windows notes**
+- Get Python from <https://www.python.org/downloads/> and tick *"Add python.exe to PATH"* in the installer.
+- If several Pythons are installed, `python` may still start an old one. Create the virtual environment with a specific version instead: `py -3.12 -m venv .venv` (`py --list` shows what is installed). Once it is activated, `python` means the venv's Python.
+- Clone into a normal folder such as `Documents`. A Command Prompt opened "as administrator" starts in `C:\Windows\System32`, which is a protected system folder and the wrong place for projects.
+- If you created `.venv` with the wrong Python, delete the `.venv` folder and run the steps above again.
 
 `pip install -e .` also installs a `pdf-editor` command.
 
